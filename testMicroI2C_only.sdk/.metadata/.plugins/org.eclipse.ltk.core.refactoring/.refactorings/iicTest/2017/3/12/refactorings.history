@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Move &apos;i2cCustom.c, i2cCustom.h&apos; to &apos;src&apos;" description="Move 2 resources to &apos;src&apos;" destination="src" element1="/test/src/i2cCustom.c" element2="/test/src/i2cCustom.h" flags="7" id="org.eclipse.ltk.core.refactoring.move.resources" resources="2" stamp="1490277246164" updateReferences="true"/>
+</session>

@@ -1,0 +1,74 @@
+17:14:02 **** Auto Build of configuration Debug for project iicTest ****
+make all 
+Building file: ../src/i2cCustom.c
+Invoking: MicroBlaze gcc compiler
+mb-gcc -Wall -O0 -g3 -c -fmessage-length=0 -MT"src/i2cCustom.o" -I../../iicTest_bsp/microblaze_0/include -mlittle-endian -mcpu=v10.0 -mxl-soft-mul -Wl,--no-relax -MMD -MP -MF"src/i2cCustom.d" -MT"src/i2cCustom.o" -o "src/i2cCustom.o" "../src/i2cCustom.c"
+../src/i2cCustom.c:4:1: warning: data definition has no type or storage class
+ WriteBuffer1[2]={MPUREG_PWR_MGMT_1,0x80};
+ ^
+../src/i2cCustom.c:4:1: warning: type defaults to 'int' in declaration of 'WriteBuffer1' [-Wimplicit-int]
+../src/i2cCustom.c: In function 'RaviWriteData2':
+../src/i2cCustom.c:360:41: warning: passing argument 2 of 'XIic_MasterSend' from incompatible pointer type [-Wincompatible-pointer-types]
+  Status = XIic_MasterSend(&IicInstance, WriteBuffer1, ByteCount);
+                                         ^
+In file included from ../src/../../iicTest/src/i2cCustom.h:8:0,
+                 from ../src/i2cCustom.c:1:
+../../iicTest_bsp/microblaze_0/include/xiic.h:554:5: note: expected 'u8 * {aka unsigned char *}' but argument is of type 'int *'
+ int XIic_MasterSend(XIic *InstancePtr, u8 *TxMsgPtr, int ByteCount);
+     ^
+../src/i2cCustom.c:383:41: warning: passing argument 2 of 'XIic_MasterSend' from incompatible pointer type [-Wincompatible-pointer-types]
+  Status = XIic_MasterSend(&IicInstance, WriteBuffer1, ByteCount);
+                                         ^
+In file included from ../src/../../iicTest/src/i2cCustom.h:8:0,
+                 from ../src/i2cCustom.c:1:
+../../iicTest_bsp/microblaze_0/include/xiic.h:554:5: note: expected 'u8 * {aka unsigned char *}' but argument is of type 'int *'
+ int XIic_MasterSend(XIic *InstancePtr, u8 *TxMsgPtr, int ByteCount);
+     ^
+../src/i2cCustom.c:337:6: warning: variable 'BusBusy' set but not used [-Wunused-but-set-variable]
+  int BusBusy;
+      ^
+Finished building: ../src/i2cCustom.c
+ 
+Building file: ../src/iicTest.c
+Invoking: MicroBlaze gcc compiler
+mb-gcc -Wall -O0 -g3 -c -fmessage-length=0 -MT"src/iicTest.o" -I../../iicTest_bsp/microblaze_0/include -mlittle-endian -mcpu=v10.0 -mxl-soft-mul -Wl,--no-relax -MMD -MP -MF"src/iicTest.d" -MT"src/iicTest.o" -o "src/iicTest.o" "../src/iicTest.c"
+../src/iicTest.c: In function 'main':
+../src/iicTest.c:99:5: warning: unused variable 'z' [-Wunused-variable]
+  u8 z=DynReadReg(0x3C);
+     ^
+../src/iicTest.c:61:7: warning: variable 'Appu' set but not used [-Wunused-but-set-variable]
+  u8 y,Appu=0;
+       ^
+../src/iicTest.c:61:5: warning: variable 'y' set but not used [-Wunused-but-set-variable]
+  u8 y,Appu=0;
+     ^
+In file included from ../src/iicTest.c:11:0:
+../src/iicTest.c: At top level:
+../src/i2cCustom.h:217:12: warning: 'SetupInterruptSystem' declared 'static' but never defined [-Wunused-function]
+ static int SetupInterruptSystem(XIic *IicInstPtr);
+            ^
+../src/i2cCustom.h:218:13: warning: 'SendHandler' declared 'static' but never defined [-Wunused-function]
+ static void SendHandler(XIic *InstancePtr);
+             ^
+../src/i2cCustom.h:219:13: warning: 'ReceiveHandler' declared 'static' but never defined [-Wunused-function]
+ static void ReceiveHandler(XIic *InstancePtr);
+             ^
+../src/i2cCustom.h:220:13: warning: 'StatusHandler' declared 'static' but never defined [-Wunused-function]
+ static void StatusHandler(XIic *InstancePtr, int Event);
+             ^
+Finished building: ../src/iicTest.c
+ 
+Building target: iicTest.elf
+Invoking: MicroBlaze gcc linker
+mb-gcc -Wl,-T -Wl,../src/lscript.ld -L../../iicTest_bsp/microblaze_0/lib -mlittle-endian -mcpu=v10.0 -mxl-soft-mul -Wl,--no-relax -o "iicTest.elf"  ./src/i2cCustom.o ./src/iicTest.o ./src/platform.o   -Wl,--start-group,-lxil,-lgcc,-lc,--end-group
+Finished building target: iicTest.elf
+ 
+Invoking: MicroBlaze Print Size
+mb-size iicTest.elf  |tee "iicTest.elf.size"
+   text	   data	    bss	    dec	    hex	filename
+  20620	    400	   3380	  24400	   5f50	iicTest.elf
+Finished building: iicTest.elf.size
+ 
+
+17:14:02 Build Finished (took 214ms)
+

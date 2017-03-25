@@ -1,0 +1,103 @@
+
+
+/***************************** Include Files *********************************/
+
+#include "xparameters.h"
+#include "xiic.h"
+#include "xintc.h"
+#include "xil_exception.h"
+#include "sleep.h"
+
+#include "i2cCustom.h"
+
+/************************** Constant Definitions *****************************/
+
+/*
+ * The following constants map to the XPAR parameters created in the
+ * xparameters.h file. They are defined here such that a user can easily
+ * change all the needed parameters in one place.
+ */
+#define IIC_DEVICE_ID			XPAR_IIC_0_DEVICE_ID
+#define INTC_DEVICE_ID			XPAR_INTC_0_DEVICE_ID
+#define IIC_INTR_ID			XPAR_INTC_0_IIC_0_VEC_ID
+
+
+#define EEPROM_ADDRESS		0x69	/* 0xA0 as an 8 bit number. */
+
+
+typedef u8 AddressType;
+
+
+int IicDynInit(u8 slaveAddress);
+
+int DynWriteData(u8 data);
+
+u8 DynReadReg(u8 readReg);
+
+int DynWriteReg(u8 reg, u8 value);
+
+/************************** Variable Definitions *****************************/
+
+XIic IicInstance;		/* The instance of the IIC device. */
+XIntc InterruptController;	/* The instance of the Interrupt Controller. */
+
+/*
+ * Write buffer for writing a page.
+ */
+u8 WriteBuffer[2]={MPUREG_PWR_MGMT_1,0xFF};
+
+u8 ReadBuffer[1]={0x00};	/* Read buffer for reading a page. */
+
+volatile u8 TransmitComplete;	/* Flag to check completion of Transmission */
+volatile u8 ReceiveComplete;	/* Flag to check completion of Reception */
+
+u8 EepromIicAddr;		/* Variable for storing Eeprom IIC address */
+
+
+int main(void)
+{
+	int Status;
+
+	u8 y,Appu=0;
+	/*
+	 * Run the Dynamic EEPROM example.
+	 */
+	Status = IicDynInit(0x69);
+	if (Status != XST_SUCCESS) {
+		return XST_FAILURE;
+	}
+	y=DynReadReg(0x75);
+
+	Appu=DynReadReg(MPUREG_PWR_MGMT_1);
+		/*
+		 * Start the IIC device.
+		 */
+		Status = XIic_Start(&IicInstance);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+		IicInstance.Options = XII_REPEATED_START_OPTION;
+		/*
+		 * Send the Data.
+		 */
+		Status = XIic_DynMasterSend(&IicInstance, WriteBuffer, 2);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+		/*
+		 * Start the IIC device.
+		 */
+		Status = XIic_Stop(&IicInstance);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+	Appu=DynReadReg(MPUREG_PWR_MGMT_1);
+
+
+
+
+	u8 z=DynReadReg(0x3C);
+	return XST_SUCCESS;
+}
+
+

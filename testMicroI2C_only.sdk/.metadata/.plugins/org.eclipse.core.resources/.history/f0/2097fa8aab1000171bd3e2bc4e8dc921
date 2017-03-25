@@ -1,0 +1,135 @@
+
+
+/***************************** Include Files *********************************/
+
+#include "xparameters.h"
+#include "xiic.h"
+#include "xintc.h"
+#include "xil_exception.h"
+#include "sleep.h"
+
+#include "i2cCustom.h"
+
+/************************** Constant Definitions *****************************/
+
+/*
+ * The following constants map to the XPAR parameters created in the
+ * xparameters.h file. They are defined here such that a user can easily
+ * change all the needed parameters in one place.
+ */
+#define IIC_DEVICE_ID			XPAR_IIC_0_DEVICE_ID
+#define INTC_DEVICE_ID			XPAR_INTC_0_DEVICE_ID
+#define IIC_INTR_ID			XPAR_INTC_0_IIC_0_VEC_ID
+
+
+#define EEPROM_ADDRESS		0x69	/* 0xA0 as an 8 bit number. */
+
+
+typedef u8 AddressType;
+
+
+int IicDynInit(u8 slaveAddress);
+
+int DynWriteData(u8 data);
+
+u8 DynReadReg(u8 readReg);
+
+int DynWriteReg(u8 reg, u8 value);
+int writeReg(u8 ByteCount );
+
+/************************** Variable Definitions *****************************/
+
+XIic IicInstance;		/* The instance of the IIC device. */
+XIntc InterruptController;	/* The instance of the Interrupt Controller. */
+
+/*
+ * Write buffer for writing a page.
+ */
+u8 WriteBuffer[2]={MPUREG_PWR_MGMT_1,0x01};
+
+u8 ReadBuffer[1]={0x00};	/* Read buffer for reading a page. */
+
+volatile u8 TransmitComplete;	/* Flag to check completion of Transmission */
+volatile u8 ReceiveComplete;	/* Flag to check completion of Reception */
+
+u8 EepromIicAddr;		/* Variable for storing Eeprom IIC address */
+
+u8 bufnew[18]={MPUREG_PWR_MGMT_1,0x80,MPUREG_PWR_MGMT_1,0x01,MPUREG_PWR_MGMT_2,0x00,
+    		MPUREG_CONFIG,0x00,MPUREG_GYRO_CONFIG,0x18,MPUREG_ACCEL_CONFIG,0x08,MPUREG_INT_PIN_CFG,0x30,MPUREG_USER_CTRL,0x20,MPUREG_I2C_MST_CTRL,0x0D};
+
+int main(void)
+{
+	int Status;
+
+	u8 Appu =0;
+	/*
+	 * Run the Dynamic EEPROM example.
+	 */
+	Status = IicDynInit(0x69);
+	if (Status != XST_SUCCESS) {
+		return XST_FAILURE;
+	}
+	Appu=DynReadReg(0x75);
+
+	Status=writeReg(2);
+
+	//1
+	Appu=DynReadReg(MPUREG_PWR_MGMT_1);
+	//2
+	Appu=DynReadReg(MPUREG_PWR_MGMT_2);
+	//3
+	Appu=DynReadReg(MPUREG_CONFIG);
+	//4
+	Appu=DynReadReg(MPUREG_GYRO_CONFIG);
+	//5
+	Appu=DynReadReg(MPUREG_ACCEL_CONFIG);
+	//6
+	Appu=DynReadReg(MPUREG_INT_PIN_CFG);
+	//7
+	Appu=DynReadReg(MPUREG_USER_CTRL);
+	//8
+	Appu=DynReadReg(MPUREG_I2C_MST_CTRL);
+
+
+	return XST_SUCCESS;
+}
+
+int writeReg(u8 reg1, u8 reg2 )
+{
+	int Status;
+
+	u8 WriteBuffer[2] ={reg1,reg2};
+
+	/* * Start the IIC device. */
+
+			Status = XIic_Start(&IicInstance);
+			if (Status != XST_SUCCESS) {
+				return XST_FAILURE;
+			}
+			IicInstance.Options = XII_REPEATED_START_OPTION;
+			/*
+			 * Send the Data.
+			 */
+			Status = XIic_DynMasterSend(&IicInstance, WriteBuffer, ByteCount);
+			if (Status != XST_SUCCESS) {
+				return XST_FAILURE;
+			}
+			while (TransmitComplete) {}
+			IicInstance.Options = 0x0;
+
+			Status = XIic_MasterSend(&IicInstance, WriteBuffer, ByteCount);
+			if (Status != XST_SUCCESS) {
+				return XST_FAILURE;
+			}
+			while (TransmitComplete) {}
+			usleep(1000);
+			/*
+			 * Stop the IIC device.
+			 */
+			Status = XIic_Stop(&IicInstance);
+			if (Status != XST_SUCCESS) {
+				return XST_FAILURE;
+			}
+	return XST_SUCCESS;
+}
+

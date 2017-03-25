@@ -1,0 +1,135 @@
+
+
+/***************************** Include Files *********************************/
+
+#include "xparameters.h"
+#include "xiic.h"
+#include "xintc.h"
+#include "xil_exception.h"
+#include "sleep.h"
+
+#include "i2cCustom.h"
+
+/************************** Constant Definitions *****************************/
+
+/*
+ * The following constants map to the XPAR parameters created in the
+ * xparameters.h file. They are defined here such that a user can easily
+ * change all the needed parameters in one place.
+ */
+#define IIC_DEVICE_ID			XPAR_IIC_0_DEVICE_ID
+#define INTC_DEVICE_ID			XPAR_INTC_0_DEVICE_ID
+#define IIC_INTR_ID			XPAR_INTC_0_IIC_0_VEC_ID
+
+
+#define EEPROM_ADDRESS		0x69	/* 0xA0 as an 8 bit number. */
+
+
+typedef u8 AddressType;
+
+
+int IicDynInit(u8 slaveAddress);
+
+int DynWriteData(u8 data);
+
+u8 DynReadReg(u8 readReg);
+
+int DynWriteReg(u8 reg, u8 value);
+int writeReg(u8 reg1, u8 reg2 );
+
+/************************** Variable Definitions *****************************/
+
+XIic IicInstance;		/* The instance of the IIC device. */
+XIntc InterruptController;	/* The instance of the Interrupt Controller. */
+
+/*
+ * Write buffer for writing a page.
+ */
+u8 WriteBuffer[2]={MPUREG_PWR_MGMT_1,0x01};
+
+u8 ReadBuffer[1]={0x00};	/* Read buffer for reading a page. */
+
+volatile u8 TransmitComplete;	/* Flag to check completion of Transmission */
+volatile u8 ReceiveComplete;	/* Flag to check completion of Reception */
+
+u8 EepromIicAddr;		/* Variable for storing Eeprom IIC address */
+
+
+int main(void)
+{
+	int Status;
+
+	u8 Appu =0;		// variable to read back the values
+	/*
+	 * Run the Dynamic EEPROM example.
+	 */
+	Status = IicDynInit(0x69);
+	if (Status != XST_SUCCESS) {
+		return XST_FAILURE;
+	}
+
+
+
+
+
+
+
+	return XST_SUCCESS;
+}
+
+int config_mpu(void)
+{
+	int Status;
+	//1
+		Status=writeReg(MPUREG_PWR_MGMT_1,0x01);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+		Appu=DynReadReg(MPUREG_PWR_MGMT_1);
+		//2
+		Status=writeReg(MPUREG_PWR_MGMT_2,0x00);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+		Appu=DynReadReg(MPUREG_PWR_MGMT_2);
+		//3
+		Status=writeReg(MPUREG_CONFIG,0x00);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+		Appu=DynReadReg(MPUREG_CONFIG);
+		//4
+		Status=writeReg(MPUREG_GYRO_CONFIG,0x18);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+		Appu=DynReadReg(MPUREG_GYRO_CONFIG);
+		//5
+		Status=writeReg(MPUREG_ACCEL_CONFIG,0x08);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+		Appu=DynReadReg(MPUREG_ACCEL_CONFIG);
+		//6
+		Status=writeReg(MPUREG_INT_PIN_CFG,0x30);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+		Appu=DynReadReg(MPUREG_INT_PIN_CFG);
+		//7
+		Status=writeReg(MPUREG_USER_CTRL,0x20);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+		Appu=DynReadReg(MPUREG_USER_CTRL);
+		//8
+		Status=writeReg(MPUREG_I2C_MST_CTRL,0x0D);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+		Appu=DynReadReg(MPUREG_I2C_MST_CTRL);
+	return XST_SUCCESS;
+
+}
+
+

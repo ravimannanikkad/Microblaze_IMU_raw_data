@@ -1,0 +1,263 @@
+/******************************************************************************
+*
+* Copyright (C) 2006 - 2014 Xilinx, Inc.  All rights reserved.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
+*
+* Use of the Software is limited solely to applications:
+* (a) running on a Xilinx device, or
+* (b) that interact with a Xilinx device through a bus or interconnect.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+* XILINX  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+* WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+* OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*
+* Except as contained in this notice, the name of the Xilinx shall not be used
+* in advertising or otherwise to promote the sale, use or other dealings in
+* this Software without prior written authorization from Xilinx.
+*
+******************************************************************************/
+/*****************************************************************************/
+/**
+* @file xiic_dynamic_eeprom_example.c
+*
+* This file consists of a Interrupt mode design example which uses the Xilinx
+* IIC device and XIic driver to exercise the EEPROM in Dynamic controller mode.
+* The XIic driver uses the complete FIFO functionality to transmit/receive data.
+*
+* This example writes/reads from the lower 256 bytes of the IIC EEPROMS. Please
+* refer to the datasheets of the IIC EEPROM's for details about the internal
+* addressing and page size of these devices.
+*
+* The XIic_DynMasterSend() API is used to transmit the data and
+* XIic_DynMasterRecv() API is used to receive the data.
+*
+* This example is tested on ML300/ML310/ML403/ML501/ML507/ML510/ML605/SP601 and
+* SP605 Xilinx boards.
+*
+* The ML310/ML410/ML510 boards have a on-board 64 Kb serial IIC EEPROM
+* (Microchip 24LC64A). The WP pin of the IIC EEPROM is hardwired to ground on
+* this board.
+*
+* The ML300 board has an on-board 32 Kb serial IIC EEPROM(Microchip 24LC32A).
+* The WP pin of the IIC EEPROM has to be connected to ground for this example.
+* The WP is connected to pin Y3 of the FPGA.
+*
+* The ML403 board has an on-board 4 Kb serial IIC EEPROM(Microchip 24LC04A).
+* The WP pin of the IIC EEPROM is hardwired to ground on this board.
+*
+* The ML501/ML505/ML507/ML605/SP601/SP605 boards have an on-board 8 Kb serial
+* IIC EEPROM(STM M24C08). The WP pin of the IIC EEPROM is hardwired to ground
+* on these boards.
+*
+* The AddressType for ML300/ML310/ML410/ML510 boards should be u16 as the
+* address pointer in the on board EEPROM is 2 bytes.
+*
+* The AddressType for ML403/ML501/ML505/ML507/ML605/SP601/SP605 boards should
+* be u8 as the address pointer for the on board EEPROM is 1 byte.
+*
+* The 7 bit IIC Slave address of the IIC EEPROM on the ML300/ML310/ML403/ML410/
+* ML501/ML505/ML507/ML510 boards is 0x50.
+* The 7 bit IIC Slave address of the IIC EEPROM on the ML605/SP601/SP605 boards
+* is 0x54.
+* Refer to the User Guide's of the respective boards for further information
+* about the IIC slave address of IIC EEPROM's.
+*
+* The define EEPROM_ADDRESS in this file needs to be changed depending on
+* the board on which this example is to be run.
+*
+* This code assumes that no Operating System is being used.
+*
+* @note
+*
+* None.
+*
+* <pre>
+* MODIFICATION HISTORY:
+*
+* Ver   Who  Date	 Changes
+* ----- ---- -------- ---------------------------------------------------------
+* 1.00a mta  04/13/06 Created.
+* 2.00a ktn  11/17/09 Updated to use the HAL APIs.
+* 2.01a ktn  03/17/10 Updated the information about the EEPROM's used on
+*		      ML605/SP601/SP605 boards. Updated the example so that it
+*		      can be used to access the entire IIC EEPROM for devices
+*		      like M24C04/M24C08 that use LSB bits of the IIC device
+*		      select code (IIC slave address) to specify the higher
+*		      address bits of the EEPROM internal address.
+* </pre>
+*
+******************************************************************************/
+
+/***************************** Include Files *********************************/
+
+#include "xparameters.h"
+#include "xiic.h"
+#include "xintc.h"
+#include "xil_exception.h"
+#include "sleep.h"
+
+#include "i2cCustom.h"
+
+/************************** Constant Definitions *****************************/
+
+/*
+ * The following constants map to the XPAR parameters created in the
+ * xparameters.h file. They are defined here such that a user can easily
+ * change all the needed parameters in one place.
+ */
+#define IIC_DEVICE_ID			XPAR_IIC_0_DEVICE_ID
+#define INTC_DEVICE_ID			XPAR_INTC_0_DEVICE_ID
+#define IIC_INTR_ID			XPAR_INTC_0_IIC_0_VEC_ID
+
+/*
+ * The following constant defines the address of the IIC Slave device on the
+ * IIC bus. Note that since the address is only 7 bits, this constant is the
+ * address divided by 2.
+ * The 7 bit IIC Slave address of the IIC EEPROM on the ML300/ML310/ML403/ML510/
+ * ML501/ML505/ML507/ML510 boards is 0x50. The 7 bit IIC Slave address of the
+ * IIC EEPROM on the ML605/SP601/SP605 boards is 0x54.
+ * Please refer the User Guide's of the respective boards for further
+ * information about the IIC slave address of IIC EEPROM's.
+ */
+#define EEPROM_ADDRESS		0x69	/* 0xA0 as an 8 bit number. */
+
+/*
+ * The page size determines how much data should be written at a time.
+ * The ML310/ML300 board supports a page size of 32 and 16.
+ * The write function should be called with this as a maximum byte count.
+ */
+#define PAGE_SIZE		16
+
+/*
+ * The Starting address in the IIC EEPROM on which this test is performed.
+ */
+#define EEPROM_TEST_START_ADDRESS   128
+
+/**************************** Type Definitions *******************************/
+
+/*
+ * The AddressType for ML300/ML310/ML410/ML510 boards should be u16 as the
+ * address pointer in the on board EEPROM is 2 bytes.
+ * The AddressType for ML403/ML501/ML505/ML507/ML605/SP601/SP605 boards should
+ * be u8 as the address pointer in the on board EEPROM is 1 bytes.
+ */
+typedef u8 AddressType;
+
+/***************** Macros (Inline Functions) Definitions *********************/
+
+/************************** Function Prototypes ******************************/
+
+int IicDynInit(u8 slaveAddress);
+
+int DynWriteData(u8 data);
+
+u8 DynReadReg(u8 readReg);
+
+int DynWriteReg(u8 reg, u8 value);
+
+/************************** Variable Definitions *****************************/
+
+XIic IicInstance;		/* The instance of the IIC device. */
+XIntc InterruptController;	/* The instance of the Interrupt Controller. */
+
+/*
+ * Write buffer for writing a page.
+ */
+u8 WriteBuffer[1]={0x75};
+
+u8 ReadBuffer[1]={0x00};	/* Read buffer for reading a page. */
+
+volatile u8 TransmitComplete;	/* Flag to check completion of Transmission */
+volatile u8 ReceiveComplete;	/* Flag to check completion of Reception */
+
+u8 EepromIicAddr;		/* Variable for storing Eeprom IIC address */
+
+/************************** Function Definitions *****************************/
+
+/*****************************************************************************/
+/**
+*
+* Main function to call the Dynamic EEPROM example.
+*
+* @param	None.
+*
+* @return	XST_SUCCESS if successful else XST_FAILURE.
+*
+* @note		None.
+*
+******************************************************************************/
+int main(void)
+{
+	int Status;
+
+	/*
+	 * Run the Dynamic EEPROM example.
+	 */
+	Status = IicDynInit(0x69);
+	if (Status != XST_SUCCESS) {
+		return XST_FAILURE;
+	}
+
+	data[2]=[MPUREG_PWR_MGMT_1,0xFF];
+
+	Status = XIic_Start(&IicInstance);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+
+		Status = XIic_MasterSend(&IicInstance,
+									 &data,
+									 1);
+		while (XIic_IsIicBusy(&IicInstance))
+		{
+		}
+
+		/*
+			 * Stop the IIC device.
+			 */
+			Status = XIic_Stop(&IicInstance);
+			if (Status != XST_SUCCESS) {
+				return XST_FAILURE;
+			}
+
+
+
+	DynWriteReg(MPUREG_PWR_MGMT_1,0xFF);
+	u8 x=DynReadReg(MPUREG_PWR_MGMT_1);
+	DynWriteReg(MPUREG_PWR_MGMT_2,0x00); //
+	x=DynReadReg(MPUREG_PWR_MGMT_1);
+	DynWriteReg(MPUREG_CONFIG,0x00);
+	DynWriteReg(MPUREG_GYRO_CONFIG,0x18);
+	DynWriteReg(MPUREG_ACCEL_CONFIG,0x08);
+	DynWriteReg(MPUREG_INT_PIN_CFG,0x30);
+	DynWriteReg(MPUREG_USER_CTRL,0x20);
+	DynWriteReg(MPUREG_I2C_MST_CTRL,0x0D);
+
+
+
+/*	Status=DynWriteDataBuffer(bufnew,18);
+	if (Status != XST_SUCCESS) {
+		return XST_FAILURE;
+	}
+*/
+	u8 j=DynReadReg(0x75);
+
+	u8 y=DynReadReg(0x3B);
+	u8 z=DynReadReg(0x3C);
+	return XST_SUCCESS;
+}
+
+

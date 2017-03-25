@@ -1,0 +1,6 @@
+12:32:29 **** Incremental Build of configuration Debug for project test_preconfigure_mpu ****
+make all 
+make: Nothing to be done for `all'.
+
+12:32:29 Build Finished (took 70ms)
+
